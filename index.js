@@ -16,7 +16,6 @@ app.use(bodyParser.json());
 
 
 // ELEMENTARY FUNCTIONS
-// --------------------
 
 function writeFile(fileName, dataStore) {
     let data = JSON.stringify(dataStore);
@@ -34,8 +33,8 @@ function appendFile(fileName, data) {
     writeFile(fileName, fileData);
 }
 
+
 // ORDER FUNCTIONS
-// ---------------
 
 function getMenu() {
     return readFile(file[0])
@@ -45,8 +44,57 @@ function addOrder(order) {
     appendFile(file[1], order);
 }
 
-function getOrders() {
-    return readFile(file[1]);
+function getActiveOrders() {
+
+    let finalOrder = [];
+
+    let orders = readFile(file[1]);
+    let activeOrder = orders.filter(x => x.status === true);
+
+    let activeUserID = [];
+    activeOrder.forEach(x => activeUserID.indexOf(x.user_id) > -1 ? null : activeUserID.push(x.user_id));
+
+    let userDetails = readFile(file[2]).filter(x => activeUserID.indexOf(x.id) > -1 ? x : null);
+
+    userDetails.forEach(u => finalOrder.push({
+        name: `${u.first_name} ${u.last_name}`,
+        user_id: u.id,
+        active: true,
+        data: []
+    }));
+
+    let userOrders = [];
+    activeUserID.forEach(x => userOrders.push(activeOrder.filter(y => y.user_id === x)));
+
+    userOrders.forEach((u, index) => {
+        let itemNames = [];
+
+        u.forEach(s => {
+            let check = itemNames.filter(f => f.id === s.item);
+            if (!check.length) {
+                itemNames.push({
+                    id: s.item,
+                    item: readFile(file[0]).filter(r => r.id === s.item)[0].item,
+                    quantity: s.quantity
+                });
+            } else {
+                check[0].quantity += s.quantity;
+            }
+        });
+
+        finalOrder[index].data = itemNames;
+        itemNames = [];
+    });
+
+    return {
+        order: finalOrder
+    };
+}
+
+function orderComplete(data) {
+    let orders = readFile(file[1]);
+    orders.forEach(o => o.user_id === data.user_id ? o.status = false : null);
+    writeFile(file[1], orders);
 }
 
 function generateOrderId() {
@@ -84,33 +132,20 @@ function generateOrderId() {
 
 
 // PROFILE FUNCTIONS
-// -----------------
 
 function addUser(data) {
     appendFile(file[2], data);
 }
 
-
 // SOCKET CONNECTION
 
 io.on('connection', (socket) => {
-    socket.emit('menu', getMenu());
 
-    socket.on('menu', () => console.log('menu event triggered'));
+    socket.on('get-orders', () => socket.emit('all-orders', getActiveOrders()));
 
-    socket.on('set-order', (data) => {
-        addOrder(data);
-        socket.emit('get-orders', getOrders())
-    });
+    socket.on('all-orders', () => console.log('all-orders event triggered!'));
 
-    socket.on('get-order', () => console.log('menu event triggered'));
-
-    socket.on('new-user', (data) => {
-        // data.name
-        let userData = addUser(data.name);
-        socket.
-            console.log('menu event triggered')
-    });
+    socket.on('order-complete', (data) => orderComplete(data));
 
     socket.on('disconnect', () => console.log('disconnected from server'));
 });
@@ -119,13 +154,14 @@ io.on('connection', (socket) => {
 // APIS
 
 app.get('/menu', (req, res) => res.send(getMenu()));
+
 app.post('/place-order', (req, res) => {
     let data = req.body;
-    data.order_id = generateOrderId();
+    data.status = true;
     addOrder(req.body);
-    // emit socket event here
-    res.json({ order_id: data.order_id });
+    res.json({ message: 'order placed' });
 });
+
 app.post('/add-user', (req, res) => {
     let data = {
         id: uuidv4(),
