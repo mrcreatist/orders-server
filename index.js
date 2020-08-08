@@ -33,6 +33,9 @@ function appendFile(fileName, data) {
     writeFile(fileName, fileData);
 }
 
+// FILE CHECK FUNCTION
+(file.forEach(i => !fs.existsSync(file) ? writeFile(i, []) : null));
+
 
 // ORDER FUNCTIONS
 
