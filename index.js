@@ -6,9 +6,9 @@ let io = require('socket.io')(server);
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const file = [
-    'menu.json',
-    'orders.json',
-    'users.json'
+    'data/menu.json',
+    'data/orders.json',
+    'data/users.json'
 ];
 
 app.use(cors());
@@ -19,11 +19,11 @@ app.use(bodyParser.json());
 
 function writeFile(fileName, dataStore) {
     let data = JSON.stringify(dataStore);
-    fs.writeFileSync(`data/${fileName}`, data);
+    fs.writeFileSync(fileName, data);
 }
 
 function readFile(fileName) {
-    let x = fs.readFileSync(`data/${fileName}`, 'utf8');
+    let x = fs.readFileSync(fileName, 'utf8');
     return x.length ? JSON.parse(x) : [];
 }
 
@@ -34,7 +34,7 @@ function appendFile(fileName, data) {
 }
 
 // FILE CHECK FUNCTION
-(file.forEach(i => !fs.existsSync(file) ? writeFile(i, []) : null));
+(file.forEach(i => fs.exists(i, (proof) => proof ? null : writeFile(i, []))));
 
 
 // ORDER FUNCTIONS
