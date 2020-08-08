@@ -173,5 +173,5 @@ app.post('/add-user', (req, res) => {
     res.json(data);
 });
 
-
-server.listen(process.env.PORT || 3333, () => console.log(`listening on ${process.env.PORT || 3333}`));
+let port = process.env.PORT || 3334;
+server.listen(port, () => console.log(`listening on ${port}`));
